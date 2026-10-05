@@ -1,30 +1,16 @@
-# connection_fsm
+# contract-connection-fsm
 
-A Lean 4 + Plausible model of the client↔server connection lifecycle, written to
-pin a real bug: a client dropped by the server's liveliness window keeps a stale
-identity and never re-announces, so it believes it is connected while the server
-has forgotten it (a "ghost"). The fix is one rule — a client that stops hearing
-the server re-joins.
+A Lean 4 model of the client and server connection lifecycle, property-tested with Plausible.
 
-## What Plausible proves
+## What it is for
 
-- **Soundness** — the client's belief never disagrees with the server once
-  settled (`joinedFlag == serverHas`). No ghost.
-- **Completeness within a 5-second budget** — from any history, an awake client
-  is healthy (joined and server-acknowledged) within 5 ticks. One tick is one
-  second, so this is a FoundationDB-style **5-second transaction limit**: a
-  stuck connection self-heals inside 5 s rather than waiting forever.
+It pins one bug: a client the server drops for silence keeps its stale identity, believes it is still connected, and never re-announces. The model shows that a client which re-joins once it stops hearing the server never disagrees with the server once settled and always recovers within the transaction time limit, and that the protocol without the re-join does not recover.
 
-The buggy protocol (no auto-rejoin) is shown not complete: Plausible finds a
-counter-example, and the runnable witness stays `healthy=false` after 100 s.
+## Build and run
 
-```sh
-lake exe fsm_demo
-# FIXED: soundness 30000/30000, recovery-within-5s 30000/30000
-# GHOST history -> BUGGY after 100s: healthy=false (cs=joined, serverHas=false, joinedFlag=true)
-# GHOST history -> FIXED after 5s:   healthy=true
-```
+    lake build
+    lake exe fsm_demo
 
-`LIVENESS = 15` (server drop window), `REJOIN = 4` (client re-join delay),
-`BUDGET = 5` (the transaction limit). The fix lives in the loop client's
-connection state machine.
+## Licence
+
+MIT; see `LICENSE`.
